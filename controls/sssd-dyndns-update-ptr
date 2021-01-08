@@ -1,0 +1,27 @@
+#! /bin/sh
+
+. /etc/control.d/functions-local-policy
+
+CONFIG=/etc/sssd/sssd.conf
+
+new_help disabled 'Disable update for the PTR record of the DNS server'
+new_help enabled 'Enable update for the PTR record of the DNS server. Applicable only when dyndns update is true.'
+new_help default 'Disable update for the PTR record of the DNS server.'
+
+new_subst default \
+	'^\s*[#;]?[#; ]\s*dyndns_update_ptr\s*=\s*([Ff][Aa][Ll][Ss][Ee]|[Tt][Rr][Uu][Ee])\s*' \
+	's/^\s*[#;]\?\s*\(dyndns_update_ptr\)\s*=.*/; \1 = false/'
+
+new_subst enabled \
+	'^\s*dyndns_update_ptr\s*=\s*[Tt][Rr][Uu][Ee]\s*' \
+	's/^\s*[#;]\?\s*\(dyndns_update_ptr\)\s*\=.*/\1 = true/'
+
+new_subst disabled \
+	'^\s*dyndns_update_ptr\s*=\s*[Ff][Aa][Ll][Ss][Ee]\s*' \
+	's/^\s*[#;]\?\s*\(dyndns_update_ptr\)\s*=.*/\1 = false/'
+
+new_summary 'Whether the PTR record should also be explicitly updated when updating the clients DNS records. Applicable only when dyndns_update is true. 
+This option should be False in most IPA deployments as the IPA server generates the PTR records automatically when forward records are changed.'
+
+check_default_sssd_ad_ipa_option "$CONFIG" "$*" "dyndns_update_ptr" "disabled" "enabled disabled default" || exit $?
+control_subst_with_file_check "$CONFIG" "$*" "enabled disabled default"
