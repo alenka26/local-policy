@@ -1,0 +1,31 @@
+#! /bin/sh
+
+. /etc/control.d/functions-local-policy
+
+CONFIG=/etc/sssd/sssd.conf
+
+new_summary 'The TTL to apply to the client DNS record when updating it. If dyndns_update is false this has no effect.If dyndns_ttl disable, then the TTL value set by an administrator on the server side is valid.'
+
+new_help disabled "Disable value set by manual on the side client"
+new_help RANGE "Sets the value of TTL updates in a rangeе 0 - 2147483647 (for example, ttl default is 1200 sec)"
+
+REQUEST="$*"
+set -x
+new_subst disabled \
+	'^\s*[#;]\s*dyndns_ttl\s*=*' \
+	's/^\(\s*[#;]\)\?\(\s*dyndns_ttl\)\s*=.*/;\2 = 0-2147483647 /'
+
+#check_default_option_with_section "domain\/AD" "$CONFIG" "$REQUEST" \
+#	'dyndns_ttl' "0-2147483647" "disabled"\
+#	'^[[:digit:]]+$' || exit $?
+
+check_default_sssd_ad_ipa_option "$CONFIG" "$*" \
+	'dyndns_ttl' '0-2147483647' "disabled" \
+	'^[[:digit:]]+$' || exit $?
+
+control_subst_with_file_check "$CONFIG" "$REQUEST" "disabled" \
+	'^[[:digit:]]+$' \
+	"s/^\(\s*[#;]\)\?\(\s*dyndns_ttl\)\s*=.*/\2 = $REQUEST/" \
+	'\s*dyndns_ttl\s*=\s*[^[:space:]]*\s*$' \
+	's/^\s*dyndns_ttl\s*=\s*\([^[:space:]]*\)\s*$/\1/'
+
