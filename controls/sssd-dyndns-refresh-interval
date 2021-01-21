@@ -1,0 +1,31 @@
+#! /bin/sh
+
+. /etc/control.d/functions-local-policy
+
+CONFIG=/etc/sssd/sssd.conf
+
+new_summary 'How often should the back end perform periodic DNS update in addition to the automatic update performed when the back end goes online. This option is optional and applicable only when dyndns_update is true. If value is provided less than 60, dyndns_refresh_initerval  will assume 60 seconds. '
+
+new_help disabled "Disable addition refresh interval DNS update"
+new_help RANGE "Sets the value of refresh interval DNS updates in a rangeе 60 - 2147483647 (for example, refresh interval default is 86400 sec)"
+
+REQUEST="$*"
+
+new_subst disabled \
+	'^\s*[#;]\s*dyndns_refresh_interval\s*=*' \
+	's/^\(\s*[#;]\)\?\(\s*dyndns_refresh_interval\)\s*=.*/;\2 = 60-2147483647 /'
+
+#check_default_option_with_section "domain\/AD" "$CONFIG" "$REQUEST" \
+#	'dyndns_refresh_interval' "60-2147483647" "disabled"\
+#	'^[[:digit:]]+$' || exit $?
+
+check_default_sssd_ad_ipa_option "$CONFIG" "$*" \
+	'dyndns_refresh_interval' '60-2147483647' "disabled" \
+	'^[[:digit:]]+$' || exit $?
+
+control_subst_with_file_check "$CONFIG" "$REQUEST" "disabled" \
+	'^[[:digit:]]+$' \
+	"s/^\(\s*[#;]\)\?\(\s*dyndns_refresh_interval\)\s*=.*/\2 = $REQUEST/" \
+	'\s*dyndns_refresh_interval\s*=\s*[^[:space:]]*\s*$' \
+	's/^\s*dyndns_refresh_interval\s*=\s*\([^[:space:]]*\)\s*$/\1/'
+
